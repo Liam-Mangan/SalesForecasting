@@ -21,22 +21,42 @@ library(lubridate)
 ```
 
 ```{r data}
-walmart <- read_csv("Walmart.csv")
+walmart <- read_csv("../Data/Walmart.csv")
 
 walmart <- walmart %>%
-  mutate(Date = as.Date(Date, format = "%Y-%m-%d"),
+  mutate(Date = as.Date(Date, format = "%d-%m-%Y"),
          Year = year(Date),
          Month = month(Date, label = TRUE),
          Week = isoweek(Date),
-         Holiday = if_else(Holiday_Flag == TRUE, "Holiday", "Regular"))
+         Holiday = as.factor(if_else(Holiday_Flag == 1, "Holiday", "Regular")),
+         Quarter = quarter(Date))
 ```
 
 ## Including Plots
 
 You can also embed plots, for example:
 
-```{r pressure, echo=FALSE}
-plot(pressure)
-```
+```{r exploring data}
+summary(walmart)
+colSums(is.na(walmart))
+sum(duplicated(walmart))
 
-Note that the `echo = FALSE` parameter was added to the code chunk to prevent printing of the R code that generated the plot.
+# Histogram of Weekly Sales
+ggplot(walmart, aes(x = Weekly_Sales)) +
+  geom_histogram(bins = 50, fill = "steelblue", color = "white") +
+  scale_x_continuous(labels = scales::comma) +
+  theme_minimal() +
+  labs(title = "Distribution of Weekly Sales")
+
+```
+```{r cleanup}
+#Removing sales outliers
+Q1 <- quantile(walmart$Weekly_Sales, 0.25)
+Q3 <- quantile(walmart$Weekly_Sales, 0.75)
+IQR <- Q3 - Q1
+
+walmart_clean <- walmart %>%
+  filter(Weekly_Sales > (Q1 - 1.5 * IQR) & Weekly_Sales < (Q3 + 1.5 * IQR))
+  
+
+```
