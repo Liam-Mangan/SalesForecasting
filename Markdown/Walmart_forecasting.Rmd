@@ -18,6 +18,9 @@ When you click the **Knit** button a document will be generated that includes bo
 ```{r libraries}
 library(tidyverse)
 library(lubridate)
+library(ggplot2)
+library(dplyr)
+library(scales)
 ```
 
 ```{r data}
@@ -59,4 +62,56 @@ walmart_clean <- walmart %>%
   filter(Weekly_Sales > (Q1 - 1.5 * IQR) & Weekly_Sales < (Q3 + 1.5 * IQR))
   
 
+```
+
+
+```{r data visualizations}
+store_sales <- walmart_clean %>%
+  group_by(Store) %>%
+  summarise(Avg_Weekly_Sales = mean(Weekly_Sales, na.rm = TRUE))
+
+# Weekly Sales Plot
+sales_trend <- walmart_clean %>%
+  group_by(Date) %>%
+  summarise(Average_Sales = mean(Weekly_Sales, na.rm = TRUE))
+
+ggplot(sales_trend, aes(x = Date, y = Average_Sales)) +
+  geom_line(color = "steelblue", size = 1) +
+  scale_y_continuous(labels = comma) +
+  labs(title = "Average Weekly Sales Over Time (All Stores)",
+       x = "Date", y = "Average Weekly Sales")
+
+# Weekly Sales Distribution Plot
+ggplot(walmart_clean, aes(x = Weekly_Sales)) +
+  geom_histogram(bins = 100 , fill = "steelblue", color = "white") +
+  scale_x_continuous(labels = comma) +
+  labs(title = "Distribution of Weekly Sales",
+       x = "Weekly Sales", y = "Count")
+
+# Holiday vs Non-Holiday Sales Plot
+ggplot(walmart_clean, aes(x = Holiday, y = Weekly_Sales, fill = Holiday)) +
+  geom_boxplot(outlier.color = "red", outlier.shape = 15, alpha = 0.6) +
+  scale_y_continuous(labels = comma)
+  labs(title = "Weekly Sales: Holiday vs Non-Holiday",
+       x = "", y = "Weekly Sales") +
+  scale_fill_manual(values = c("Holiday" = "tomato", "Regular" = "skyblue"))
+
+# Average Monthly Sales Plot
+monthly_sales <- walmart_clean %>%
+  group_by(Year, Month) %>%
+  summarise(Average_Sales = mean(Weekly_Sales, na.rm = TRUE))
+
+ggplot(monthly_sales, aes(x = Month, y = Average_Sales, group = Year, color = factor(Year))) +
+  geom_line(size = 0.7) +
+  scale_y_continuous(labels = comma, expand = c(0, 0), limits = c(0, NA)) +
+  labs(title = "Average Monthly Sales by Year",
+       x = "Month", y = "Average Weekly Sales")
+
+# Weekly Sales vs Unemployment
+ggplot(walmart_clean, aes(x = Unemployment, y = Weekly_Sales)) +
+  geom_point(alpha = 0.3, color = "darkgreen") +
+  geom_smooth(method = "lm", se = FALSE, color = "red") +
+  scale_y_continuous(labels = comma)+
+  labs(title = "Weekly Sales vs Unemployment Rate",
+       x = "Unemployment Rate", y = "Weekly Sales")
 ```
