@@ -21,6 +21,8 @@ library(lubridate)
 library(ggplot2)
 library(dplyr)
 library(scales)
+library(forecast)
+library(tseries)
 ```
 
 ```{r data}
@@ -114,4 +116,66 @@ ggplot(walmart_clean, aes(x = Unemployment, y = Weekly_Sales)) +
   scale_y_continuous(labels = comma)+
   labs(title = "Weekly Sales vs Unemployment Rate",
        x = "Unemployment Rate", y = "Weekly Sales")
+```
+
+```{r timeseires}
+Overall_sales <- walmart_clean %>% 
+  group_by(Date) %>% 
+  summarise(Total_Sales = sum(Weekly_Sales, na.rm = TRUE)) %>% 
+  arrange(Date)
+#Creating time series
+sales_ts <- ts(Overall_sales$Total_Sales,
+               start = c(year(min(Overall_sales$Date)),
+                         week(min(Overall_sales$Date))),
+               frequency = 52)
+
+# Time series plot
+autoplot(sales_ts) +
+  scale_y_continuous(labels = comma)+
+  geom_smooth(method = "lm", se = FALSE, color = "darkred")
+  labs(title = "Overall Weekly Sales Trend (Walmart)",
+       x = "Year",
+       y = "Total Weekly Sales")
+  
+# Plot rolling mean and variance
+roll_mean <- zoo::rollmean(sales_ts, k = 12, fill = NA)
+roll_sd   <- zoo::rollapply(sales_ts, width = 12, FUN = sd, fill = NA)
+
+plot(sales_ts, main = "Overall Walmart Weekly Sales with Rolling Mean & SD", col = "darkblue")
+lines(roll_mean, col = "red", lwd = 2)
+legend("topleft", legend = c("Original", "Rolling Mean"),
+       col = c("darkblue", "red"), lty = 1, lwd = 2)
+```
+
+```{r hypothesis testing}
+# Augmented Dickey-Fuller test
+adf_result <- adf.test(sales_ts, alternative = "stationary")
+print(adf_result)
+#	Augmented Dickey-Fuller Test
+
+#data:  sales_ts
+#Dickey-Fuller = -6.627, Lag order = 5, p-value = 0.01
+#alternative hypothesis: stationary
+```
+
+```{r forecasting/modeling}
+# Fit ARIMA model
+fit <- auto.arima(sales_ts)
+
+# Summary of the model
+summary(fit)
+
+# Forecast the next n weeks
+Forecast_Weeks <- 12
+forecast_sales <- forecast(fit, h = Forecast_Weeks)
+
+#limiting backlog to make graph more readable
+recent_sales <- window(sales_ts, start = end(sales_ts)[1] - .25, end = end(sales_ts))
+
+# Plot forecast
+autoplot(forecast_sales, include = 52) +
+  autolayer(recent_sales, series = "Actual")+
+  scale_y_continuous(labels = comma)+
+  labs(title = "Overall Walmart Weekly Sales Forecast",
+       y = "Weekly Sales", x = "Time")
 ```
