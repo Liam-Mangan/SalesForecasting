@@ -165,7 +165,7 @@ fit <- auto.arima(sales_ts)
 # Summary of the model
 summary(fit)
 
-# Forecast the next n weeks
+# Forecast the next n weeks (Chose 12 because its the first quarter of the next year)
 Forecast_Weeks <- 12
 forecast_sales <- forecast(fit, h = Forecast_Weeks)
 
@@ -178,4 +178,23 @@ autoplot(forecast_sales, include = 52) +
   scale_y_continuous(labels = comma)+
   labs(title = "Overall Walmart Weekly Sales Forecast",
        y = "Weekly Sales", x = "Time")
+```
+
+```{r model validation}
+
+#Residual check
+checkresiduals(fit)
+
+# Define training and test sets
+train <- window(sales_ts, end = c(2012, 40))   
+test  <- window(sales_ts, start = c(2012, 41))
+
+# Refit ARIMA on training data
+fit_train <- auto.arima(train)
+
+# Forecast on training set
+fc_train <- forecast(fit_train, h = length(test))
+
+# Compare forecast accuracy
+accuracy(fc_train, test)
 ```
