@@ -23,6 +23,8 @@ library(dplyr)
 library(scales)
 library(forecast)
 library(tseries)
+library(tibble)
+library(readr)
 ```
 
 ```{r data}
@@ -198,3 +200,36 @@ fc_train <- forecast(fit_train, h = length(test))
 # Compare forecast accuracy
 accuracy(fc_train, test)
 ```
+
+```{r exporting for dashboard}
+sales_ts <- ts(walmart_clean$Weekly_Sales, frequency = 52, start = c(2010, 1))
+
+sales_ts_date <- walmart_clean$Date
+
+fc <- forecast(fit, h = 52) 
+
+forecast_df <- tibble(
+  Date = seq.Date(from = max(sales_ts_date) + 7, by = "week", length.out = 52),
+  Forecast = as.numeric(fc$mean),
+  Lo80 = as.numeric(fc$lower[,1]),
+  Hi80 = as.numeric(fc$upper[,1]),
+  Lo95 = as.numeric(fc$lower[,2]),
+  Hi95 = as.numeric(fc$upper[,2])
+)
+
+# Combine with actuals
+export_df <- data.frame(
+  Date = c(sales_ts_date, seq(max(walmart_clean$Date) + 7, by = "week", length.out = 52)),
+  Sales = c(as.numeric(sales_ts), as.numeric(fc$mean)),
+  Type = c(rep("Actual", length(sales_ts)), rep("Forecast", 52))
+)
+
+# Save to CSV for Tableau
+write.csv(export_df, "walmart_forecast.csv", row.names = FALSE)
+
+write.csv(walmart_clean, "walmart_clean.csv", row.names = FALSE)
+
+
+```
+
+
